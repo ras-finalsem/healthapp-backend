@@ -15,55 +15,59 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-app.get("/hello", (req, res) => {
-  console.log("ping");
-  // Get a database reference to our posts
-  var db = admin.database();
-  var ref = db.ref("server/saving-data/healthapp-b1891");
-
-  var usersRef = ref.child("users");
-  usersRef.set({
-    vishwa1: {
-      date_of_birth: "June 23, 1912",
-      full_name: "Alan Turing"
-    },
-    krish1: {
-      date_of_birth: "December 9, 1906",
-      full_name: "Grace Hopper"
-    }
-  }, function(error) {
-    if (error) {
-      console.log("Data could not be saved." + error);
-    } else {
-      console.log("Data saved successfully.");
-    }
-  });
-  
-
-  res.json({message: "Hello health app Backend!"});
-});
-
-app.get('/hi', (req, res) => {
-
-  // Get a database reference to our posts
-  var db = admin.database();
-  var ref = db.ref("server/saving-data/healthapp-b1891/users");
-
-  // Attach an asynchronous callback to read the data at our posts reference
-  ref.on("value", function(snapshot) {
-    console.log(snapshot.val());
-  }, function (errorObject) {
-    console.log("The read failed: " + errorObject.code);
-  });
-
-
-  res.json({message: "hi"})
-})
-
 app.post("/register", (req, res) => {
   const {username, password} = req.body;
   console.log(username, password);
-  res.json({username, password})
+  
+  const userObj = {
+    [username]: {username, password}
+  };
+
+  // Get a database reference to our posts
+  var db = admin.database();
+  var ref = db.ref("server/saving-data/healthapp-b1891");
+  var usersRef = ref.child(`users/${username}`);
+
+  let message;
+  usersRef.once('value').then(function(snapshot) {
+    const response = snapshot.val();
+    if(response && response[username]) {
+      message = "user exists";
+      res.json({message})
+    } else {
+      usersRef.set(userObj , function(error) {
+        if (error) {
+          message = "something went wrong";
+        } else {
+          message = "User created";
+        }
+        res.json({message})
+      }); 
+    } 
+  });
+});
+
+app.post('/login', function(req, res) {
+  const {username, password} = req.body;
+  console.log(username, password);
+
+  // Get a database reference to our posts
+  var db = admin.database();
+  var ref = db.ref("server/saving-data/healthapp-b1891");
+  var usersRef = ref.child(`users/${username}`);
+
+  usersRef.once('value').then(function(snapshot) {
+    const response = snapshot.val();
+    if(response && response[username]) {
+      if(response[username].password === password) {
+        res.json({message: "success"});
+      } else {
+        res.json({message: "incorrect username or password"});
+      }
+    } else {
+      res.json({message: "user does not exist"})
+    } 
+  });
 });
 
 const port = 8080;
