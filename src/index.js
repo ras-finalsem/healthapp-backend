@@ -1,9 +1,13 @@
 const express = require("express");
-var cors = require('cors');
-var bodyParser = require('body-parser');
-var admin = require("firebase-admin");
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const admin = require("firebase-admin");
 
-var serviceAccount = require("./healthapp-b1891-firebase-adminsdk-p31p2-fa43138c94.json");
+const request = require("request");
+const constants = require('./constants');
+
+const serviceAccount = require("./healthapp-b1891-firebase-adminsdk-p31p2-fa43138c94.json");
+
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -17,7 +21,6 @@ app.use(bodyParser.json());
 
 app.post("/register", (req, res) => {
   const {username, password} = req.body;
-  console.log(username, password);
   
   const userObj = {
     [username]: {username, password}
@@ -28,9 +31,10 @@ app.post("/register", (req, res) => {
   var ref = db.ref("server/saving-data/healthapp-b1891");
   var usersRef = ref.child(`users/${username}`);
 
-  let message;
+  //  check if username already exists
   usersRef.once('value').then(function(snapshot) {
     const response = snapshot.val();
+    let message;
     if(response && response[username]) {
       message = "user exists";
       res.json({message})
@@ -49,7 +53,6 @@ app.post("/register", (req, res) => {
 
 app.post('/login', function(req, res) {
   const {username, password} = req.body;
-  console.log(username, password);
 
   // Get a database reference to our posts
   var db = admin.database();
@@ -58,15 +61,51 @@ app.post('/login', function(req, res) {
 
   usersRef.once('value').then(function(snapshot) {
     const response = snapshot.val();
+    let message;
     if(response && response[username]) {
       if(response[username].password === password) {
-        res.json({message: "success"});
+        message = "success";
       } else {
-        res.json({message: "incorrect username or password"});
+        message = "incorrect username or password";
       }
     } else {
-      res.json({message: "user does not exist"})
+      message = "user does not exist";
     } 
+    res.json({message});
+  });
+});
+
+app.get('/illnessesList', function(req, res) {
+
+  const {authToken} = constants;
+
+  const options = {
+    method: 'GET',
+    url: `https://sandbox-healthservice.priaid.ch/symptoms?token=${authToken}&format=json&language=en-gb`
+  };
+
+  request(options, function (error, response, body) {
+    if (error) throw new Error(error);
+    body = JSON.parse(body);
+    res.json({body});
+  });
+})
+
+app.post('/getIllness', function(req, res) {
+  const {symptomIDs, yearOfBirth, gender} = req.body,
+        {authToken} = constants;
+
+  const symptoms = symptomIDs.join(",")
+
+  const options = {
+    method: 'GET',
+    url: `https://sandbox-healthservice.priaid.ch/symptoms/proposed?symptoms=[${symptoms}]&gender=${gender}&year_of_birth=${yearOfBirth}&token=${authToken}&format=json&language=en-gb`
+  };
+  
+  request(options, function (error, response, body) {
+    if (error) throw new Error(error);
+    body = JSON.parse(body);
+    res.json({body});
   });
 });
 
