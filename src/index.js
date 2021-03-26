@@ -20,10 +20,10 @@ app.use(cors());
 app.use(bodyParser.json());
 
 app.post("/register", (req, res) => {
-  const {username, password} = req.body;
+  const {username, password, userType} = req.body;
   
   const userObj = {
-    [username]: {username, password}
+    username, password, userType
   };
 
   // Get a database reference to our posts
@@ -62,8 +62,8 @@ app.post('/login', function(req, res) {
   usersRef.once('value').then(function(snapshot) {
     const response = snapshot.val();
     let message;
-    if(response && response[username]) {
-      if(response[username].password === password) {
+    if(response) {
+      if(response.password === password) {
         message = "success";
       } else {
         message = "incorrect username or password";
@@ -108,6 +108,37 @@ app.post('/getIllness', function(req, res) {
     res.json({body});
   });
 });
+
+
+app.post('/bookAppointment', (req, res) => {
+  const {username, name, date, selectedSymptoms, status} = req.body;
+
+  var db = admin.database();
+  var ref = db.ref("server/saving-data/healthapp-b1891");
+  var usersRef = ref.child(`users`);
+
+  usersRef.child(username).update({
+    appointment: {
+      hospital: name,
+      appointmentDate: date,
+      symptoms: selectedSymptoms, 
+      status
+    }
+  });
+
+  res.json("appointment created");
+});
+
+
+app.get('/getDoctors', (req, res) => {
+  var db = admin.database();
+  var ref = db.ref("server/saving-data/healthapp-b1891");
+  ref.orderByChild('userType');
+
+  
+
+});
+
 
 const port = 8080;
 app.listen(port, () => {
