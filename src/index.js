@@ -133,14 +133,14 @@ app.post('/bookAppointment', (req, res) => {
 app.get('/getDoctors', (req, res) => {
   var db = admin.database();
   var ref = db.ref("server/saving-data/healthapp-b1891");
-  ref.orderByChild('userType');
-
-  
-
+  ref.child('users').orderByChild('userType').equalTo('Doctor').on('value', function(snapshot) { 
+    console.log(snapshot);
+    return snapshot;
+  });  
 });
 
 
-const port = 8080;
+const port = 5100;
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
 });
