@@ -110,23 +110,77 @@ app.post('/getIllness', function(req, res) {
 });
 
 
+app.get('/getAppointments', (req, res) => {
+  var db = admin.database();
+  var ref = db.ref("server/saving-data/healthapp-b1891");
+  var appointmentsRef = ref.child(`appointments`);
+
+  appointmentsRef.once("value", function(snapshot) {
+    res.send(snapshot.val());
+  }, function (errorObject) {
+    console.log("The read failed: " + errorObject.code);
+  });
+  
+});
+
 app.post('/bookAppointment', (req, res) => {
   const {username, name, date, selectedSymptoms, status} = req.body;
 
+  const appointmentObj = {
+    username, name, date, selectedSymptoms, status
+  };
+
+  // Get a database reference to our posts
   var db = admin.database();
   var ref = db.ref("server/saving-data/healthapp-b1891");
-  var usersRef = ref.child(`users`);
+  var appointmentsRef = ref.child(`appointments`);
 
-  usersRef.child(username).update({
-    appointment: {
-      hospital: name,
-      appointmentDate: date,
-      symptoms: selectedSymptoms, 
-      status
+  appointmentsRef.push(appointmentObj , function(error) {
+    if (error) {
+      message = "something went wrong";
+    } else {
+      message = "User created";
     }
-  });
+    res.json({message})
+  }); 
+});
 
-  res.json("appointment created");
+app.post('/confirmAppointment', (req, res) => {
+  const {appointmentUUID, status} = req.body;
+
+  var db = admin.database();
+  var ref = db.ref("server/saving-data/healthapp-b1891");
+  var appointmentsRef = ref.child(`appointments`);
+
+  appointmentsRef.child(appointmentUUID).update({
+    status
+  }, function(error) {
+    if (error) {
+      message = "something went wrong";
+    } else {
+      message = "User created";
+    }
+    res.json({message})
+  });
+});
+
+app.post('/confirmAppointment', (req, res) => {
+  const {appointmentUUID} = req.body;
+
+  var db = admin.database();
+  var ref = db.ref("server/saving-data/healthapp-b1891");
+  var appointmentsRef = ref.child(`appointments`);
+
+  appointmentsRef.child(appointmentUUID).update({
+    status: "confirmed",
+  }, function(error) {
+    if (error) {
+      message = "something went wrong";
+    } else {
+      message = "User created";
+    }
+    res.json({message})
+  });
 });
 
 
